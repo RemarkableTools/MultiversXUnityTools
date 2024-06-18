@@ -7,7 +7,6 @@ using Mx.NET.SDK.Wallet;
 using Mx.NET.SDK.WalletConnect.Helper;
 using Mx.NET.SDK.Provider.Dtos.Common.Transactions;
 using WalletConnectSharp.Core;
-using WalletConnectSharp.Core.Models.Pairing;
 
 namespace Mx.NET.SDK.WalletConnect
 {

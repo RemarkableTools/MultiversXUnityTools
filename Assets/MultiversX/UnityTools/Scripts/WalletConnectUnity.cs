@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
+using WalletConnectSharp.Sign.Models.Engine.Events;
 
 namespace MultiversX.UnityTools
 {
@@ -75,7 +76,7 @@ namespace MultiversX.UnityTools
         }
 
 
-        private void WalletDisconnected(object sender, EventArgs e)
+        private void WalletDisconnected(object sender, SessionEvent e)
         {
             WalletDisconnected();
         }

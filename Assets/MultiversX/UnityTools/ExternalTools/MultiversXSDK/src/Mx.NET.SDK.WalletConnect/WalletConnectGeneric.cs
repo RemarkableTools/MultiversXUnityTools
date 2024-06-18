@@ -5,17 +5,13 @@ using WalletConnectSharp.Sign;
 using WalletConnectSharp.Sign.Models.Engine;
 using Mx.NET.SDK.WalletConnect.Models;
 using WalletConnectSharp.Common.Model.Errors;
-using WalletConnectSharp.Events;
-using WalletConnectSharp.Events.Model;
-using Mx.NET.SDK.WalletConnect.Models.Events;
 using static Mx.NET.SDK.WalletConnect.Constants.Operations;
-using static Mx.NET.SDK.WalletConnect.Constants.Events;
 using System.IO;
 using WalletConnectSharp.Storage;
 using Mx.NET.SDK.WalletConnect.Data;
-using WalletConnectSharp.Core;
 using WalletConnectSharp.Network.Models;
-using WalletConnectSharp.Core.Models.Pairing;
+using WalletConnectSharp.Core;
+using WalletConnectSharp.Sign.Models.Engine.Events;
 
 namespace Mx.NET.SDK.WalletConnect
 {
@@ -25,7 +21,7 @@ namespace Mx.NET.SDK.WalletConnect
         public const string WALLETCONNECT_MULTIVERSX_NAMESPACE = "mvx";
 
         public const string RELAY_URL = "https://bridge.walletconnect.org";
-        public const string MAIAR_BRIDGE_URL = "https://maiar.page.link/?apn=com.elrond.maiar.wallet&isi=1519405832&ibi=com.elrond.maiar.wallet&link=https://maiar.com/";
+        public const string MAIAR_BRIDGE_URL = "https://maiar.page.link/?apn=com.elrond.maiar.wallet&isi=1519405832&ibi=com.elrond.maiar.wallet&link=https://xportal.com/";
 
         private readonly SignClientOptions _dappOptions = default!;
         private readonly ConnectOptions _dappConnectOptions = default!;
@@ -49,6 +45,7 @@ namespace Mx.NET.SDK.WalletConnect
 
             _dappOptions = new SignClientOptions()
             {
+                Name = metadata.Name,
                 ProjectId = projectID,
                 Metadata = metadata,
                 Storage = new FileSystemStorage(dappFilePath)
@@ -64,11 +61,12 @@ namespace Mx.NET.SDK.WalletConnect
                         {
                             Methods = new[]
                             {
-                                "mvx_signTransaction",
-                                "mvx_signTransactions",
-                                "mvx_signMessage",
-                                "mvx_signLoginToken",
-                                "mvx_cancelAction"
+                                SIGN_TRANSACTION,
+                                SIGN_TRANSACTIONS,
+                                SIGN_MESSAGE,
+                                SIGN_LOGIN_TOKEN,
+                                SIGN_NATIVE_AUTH_TOKEN,
+                                CANCEL_ACTION
                             },
                             Chains = new[]
                             {
@@ -147,6 +145,7 @@ namespace Mx.NET.SDK.WalletConnect
                 var parameters = currentSession.Split(':');
                 Address = parameters[2];
             }
+            _client.AddressProvider.LoadDefaultsAsync();
         }
 
         public async Task Disconnect()
@@ -184,47 +183,23 @@ namespace Mx.NET.SDK.WalletConnect
             return response.Signatures;
         }
 
-        public event EventHandler<GenericEvent<SessionUpdateEvent>> OnSessionUpdateEvent;
-        public event EventHandler<GenericEvent<SessionEvent>> OnSessionEvent;
-        public event EventHandler OnSessionDeleteEvent;
-        public event EventHandler OnSessionExpireEvent;
-        public event EventHandler<GenericEvent<TopicUpdateEvent>> OnTopicUpdateEvent;
+        public event EventHandler<SessionEvent> OnSessionDeleteEvent;
+        public event EventHandler<SessionStruct> OnSessionExpireEvent;
 
         private void SubscribeToEvents()
         {
-            _client.On(SESSION_UPDATE, delegate (object sender, GenericEvent<SessionUpdateEvent> @event)
-            {
-                OnSessionUpdateEvent?.Invoke(sender, @event);
-            });
-
-            _client.On(SESSION_EVENT, delegate (object sender, GenericEvent<SessionEvent> @event)
-            {
-                OnSessionEvent?.Invoke(sender, @event);
-            });
-
-            _client.On(SESSION_DELETE, delegate ()
+            _client.SessionDeleted += (sender, @event) =>
             {
                 Address = string.Empty;
                 Signature = string.Empty;
-                OnSessionDeleteEvent?.Invoke(this, EventArgs.Empty);
-            });
-
-            _client.On(SESSION_EXPIRE, delegate ()
+                OnSessionDeleteEvent?.Invoke(sender, @event);
+            };
+            _client.SessionExpired += (sender, @event) =>
             {
                 Address = string.Empty;
                 Signature = string.Empty;
-                OnSessionExpireEvent?.Invoke(this, EventArgs.Empty);
-            });
-
-            _client.Core.Pairing.On(PAIRING_DELETE, delegate (object sender, GenericEvent<TopicUpdateEvent> @event)
-            {
-                OnTopicUpdateEvent?.Invoke(sender, @event);
-            });
-
-            _client.Core.Pairing.On(PAIRING_EXPIRE, delegate (object sender, GenericEvent<TopicUpdateEvent> @event)
-            {
-                OnTopicUpdateEvent?.Invoke(sender, @event);
-            });
+                OnSessionExpireEvent?.Invoke(sender, @event);
+            };
         }
     }
 }

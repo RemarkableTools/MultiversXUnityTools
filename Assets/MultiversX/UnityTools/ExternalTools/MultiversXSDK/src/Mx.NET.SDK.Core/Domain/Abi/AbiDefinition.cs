@@ -59,29 +59,31 @@ namespace Mx.NET.SDK.Core.Domain.Abi
             if (typeFromBaseRustType != null)
                 return typeFromBaseRustType;
 
-            if (Types.Keys.Contains(type))
+            if (!Types.Keys.Contains(type)) 
+                return null;
+            
+            var typeFromStruct = Types[type];
+            switch (typeFromStruct.Type)
             {
-                var typeFromStruct = Types[type];
-                if (typeFromStruct.Type == "enum")
-                {
+                case "enum":
+                case "explicit-enum":
                     return TypeValue.EnumValue(typeFromStruct.Type,
-                                               typeFromStruct.Variants?
-                                                    .ToList()
-                                                    .Select(c => new FieldDefinition(c.Name, "", GetTypeValue(TypeValue.FromRustType("Enum").RustType)))
-                                                    .ToArray());
-                }
-                else if (typeFromStruct.Type == "struct")
-                {
+                                               typeFromStruct.Variants?.ToList()
+                                                                       .Select(v => new VariantDefinition(v.Name,
+                                                                                                          "",
+                                                                                                          v.Discriminant,
+                                                                                                          v.Fields?.ToList()
+                                                                                                                   .Select(f => new FieldDefinition(f.Name, "", GetTypeValue(f.Type)))
+                                                                                                                   .ToArray()))
+                                                                       .ToArray());
+                case "struct":
                     return TypeValue.StructValue(typeFromStruct.Type,
-                                                 typeFromStruct.Fields?
-                                                    .ToList()
-                                                    .Select(c => new FieldDefinition(c.Name, "", GetTypeValue(c.Type)))
-                                                    .ToArray());
-
-                }
+                                                 typeFromStruct.Fields?.ToList()
+                                                                       .Select(f => new FieldDefinition(f.Name, "", GetTypeValue(f.Type)))
+                                                                       .ToArray());
+                default:
+                    return null;
             }
-
-            return null;
         }
 
         public static AbiDefinition FromJson(string json)
