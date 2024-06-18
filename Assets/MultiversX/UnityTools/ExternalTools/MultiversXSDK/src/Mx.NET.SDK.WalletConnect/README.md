@@ -14,7 +14,7 @@ The content is delivered via nuget package:
 
 1. Variables init
 ```csharp
-ApiProvider Provider = new ApiProvider(new ApiNetworkConfiguration(Network.DevNet));
+IApiProvider Provider = new ApiProvider(new ApiNetworkConfiguration(Network.DevNet));
 NetworkConfig NetworkConfig { get; set; } = default!;
 Account Account { get; set; } = default!;
 ```
@@ -40,11 +40,8 @@ IWalletConnect WalletConnect = new WalletConnect(metadata, PROJECT_ID, CHAIN_ID)
 3. At start-up, you should check for old connection and setup the events
 ```csharp
 await WalletConnect.ClientInit();
-WalletConnect.OnSessionUpdateEvent += OnSessionUpdateEvent;
 WalletConnect.OnSessionEvent += OnSessionEvent;
 WalletConnect.OnSessionDeleteEvent += OnSessionDeleteEvent;
-WalletConnect.OnSessionExpireEvent += OnSessionDeleteEvent;
-WalletConnect.OnTopicUpdateEvent += OnTopicUpdateEvent;
 
 try
 {
@@ -64,7 +61,7 @@ catch (Exception ex)
 }
 ```
 
-4. Initialize WalletConnect connection
+4. If you don't have a connection saved, continue with WalletConnect connection initialization
 ```csharp
 await WalletConnect.Initialize();
 ```
@@ -89,24 +86,12 @@ catch (Exception ex)
 
 7. Session Events
 ```csharp
-private void OnSessionUpdateEvent(object? sender, GenericEvent<SessionUpdateEvent> @event)
-{
-    //Wallet connected
-}
-
-private void OnSessionEvent(object? sender, GenericEvent<SessionEvent> @event)
-{
-    //Session event
-}
-
-private void OnSessionDeleteEvent(object? sender, EventArgs e)
+private void OnSessionDeleteEvent(object? sender, SessionEvent e)
 {
     //Wallet Disconnected
-}
 
-private void OnTopicUpdateEvent(object? sender, GenericEvent<TopicUpdateEvent> @event)
-{
-    //Topic Update
+    NetworkConfig = default!;
+    Account = default!;
 }
 ```
 
@@ -120,12 +105,11 @@ await WalletConnect.Disconnect(); //this will also trigger OnSessionDeleteEvent
 await Account.Sync(Provider); //always sync account first (to have the latest nonce)
 var receiver = "RECEIVER_ADDRESS";
 
-var transaction = EGLDTransactionRequest.EGLDTransfer(
-                  NetworkConfig,
-                  Account,
-                  Address.FromBech32(receiver),
-                  ESDTAmount.EGLD("1.5"),
-                  $"hello");
+var transaction = EGLDTransactionRequest.EGLDTransfer(NetworkConfig,
+                                                      Account,
+                                                      Address.FromBech32(receiver),
+                                                      ESDTAmount.EGLD("1.5"),
+                                                      $"hello");
 
 try
 {
@@ -182,4 +166,4 @@ catch (Exception ex)
 ```
 
 ## Basic usage example
-A Windows application example can be found [here](https://github.com/RemarkableTools/Mx.NET.SDK.WalletProviders/tree/dev/tests/WinFormsV2).
+A Windows application example can be found [here](https://github.com/RemarkableTools/Mx.NET.Examples/tree/main/examples/WinForms).

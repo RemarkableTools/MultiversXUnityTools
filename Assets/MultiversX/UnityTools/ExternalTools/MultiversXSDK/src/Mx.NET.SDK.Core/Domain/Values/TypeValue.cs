@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Linq;
 
 namespace Mx.NET.SDK.Core.Domain.Values
 {
@@ -15,6 +16,7 @@ namespace Mx.NET.SDK.Core.Domain.Values
         private readonly int? _sizeInBytes;
         private readonly bool? _withSign;
         private readonly FieldDefinition[] _fieldDefinitions;
+        private readonly VariantDefinition[] _variantDefinitions;
 
         [JsonConstructor]
         public TypeValue(string binaryType, string rustType, int? sizeInBytes = null, bool? withSign = null)
@@ -30,6 +32,16 @@ namespace Mx.NET.SDK.Core.Domain.Values
             BinaryType = binaryType;
             RustType = rustType;
             _fieldDefinitions = fieldDefinitions;
+        }
+
+        public TypeValue(string binaryType, string rustType, VariantDefinition[] variantDefinitions)
+        {
+            BinaryType = binaryType;
+            RustType = rustType;
+            if (variantDefinitions.All(v => v.Discriminant == default))
+                _variantDefinitions = variantDefinitions.Select((v, index) => new VariantDefinition(v.Name, v.Description, index, v.Fields)).ToArray();
+            else
+                _variantDefinitions = variantDefinitions;
         }
 
         public TypeValue(string binaryType, TypeValue innerType = null, int? length = null)
@@ -79,6 +91,7 @@ namespace Mx.NET.SDK.Core.Domain.Values
             public const string Numeric = nameof(Numeric);
             public const string Struct = nameof(Struct);
             public const string Bytes = nameof(Bytes);
+            public const string String = nameof(String);
             public const string TokenIdentifier = nameof(TokenIdentifier);
             public const string Option = nameof(Option);
             public const string Optional = nameof(Optional);
@@ -119,6 +132,7 @@ namespace Mx.NET.SDK.Core.Domain.Values
             public const string Array20 = "array20";
             public const string Array32 = "array32";
             public const string Array46 = "array46";
+            public const string Array48 = "array48";
             public const string Array64 = "array64";
             public const string Array128 = "array128";
             public const string Array256 = "array256";
@@ -141,6 +155,7 @@ namespace Mx.NET.SDK.Core.Domain.Values
             public const string Bool = "bool";
             public const string Bytes = "bytes";
             public const string Address = "Address";
+            public const string String = "utf-8 string";
             public const string H256 = "H256";
             public const string TokenIdentifier = "TokenIdentifier";
             public const string EgldOrEsdtTokenIdentifier = "EgldOrEsdtTokenIdentifier";
@@ -164,6 +179,7 @@ namespace Mx.NET.SDK.Core.Domain.Values
 
         public static TypeValue BooleanValue => new TypeValue(BinaryTypes.Boolean, RustTypes.Bool);
         public static TypeValue AddressValue => new TypeValue(BinaryTypes.Address, RustTypes.Address);
+        public static TypeValue StringValue => new TypeValue(BinaryTypes.Bytes, RustTypes.String);
 
         public static TypeValue TokenIdentifierValue => new TypeValue(BinaryTypes.TokenIdentifier, RustTypes.TokenIdentifier);
         public static TypeValue ScResult => new TypeValue(BinaryTypes.Bytes, RustTypes.Bytes);
@@ -181,8 +197,8 @@ namespace Mx.NET.SDK.Core.Domain.Values
 
         public static TypeValue StructValue(string name, FieldDefinition[] fieldDefinitions) =>
             new TypeValue(BinaryTypes.Struct, name, fieldDefinitions);
-        public static TypeValue EnumValue(string name, FieldDefinition[] fieldDefinitions) =>
-            new TypeValue(BinaryTypes.Enum, name, fieldDefinitions);
+        public static TypeValue EnumValue(string name, VariantDefinition[] variantDefinitions) =>
+            new TypeValue(BinaryTypes.Enum, name, variantDefinitions);
 
         public static TypeValue FromLearnedType(string learnedType, TypeValue[] types)
         {
@@ -233,6 +249,8 @@ namespace Mx.NET.SDK.Core.Domain.Values
                     return ArrayValue(types[0], 32);
                 case LearnedTypes.Array46:
                     return ArrayValue(types[0], 46);
+                case LearnedTypes.Array48:
+                    return ArrayValue(types[0], 48);
                 case LearnedTypes.Array64:
                     return ArrayValue(types[0], 64);
                 case LearnedTypes.Array128:
@@ -277,6 +295,8 @@ namespace Mx.NET.SDK.Core.Domain.Values
                     return BytesValue;
                 case RustTypes.Address:
                     return AddressValue;
+                case RustTypes.String:
+                    return StringValue;
                 case RustTypes.TokenIdentifier:
                     return TokenIdentifierValue;
                 case RustTypes.EgldOrEsdtTokenIdentifier:
@@ -292,6 +312,11 @@ namespace Mx.NET.SDK.Core.Domain.Values
         public FieldDefinition[] GetFieldDefinitions()
         {
             return _fieldDefinitions;
+        }
+
+        public VariantDefinition[] GetVariantDefinitions()
+        {
+            return _variantDefinitions;
         }
     }
 }
